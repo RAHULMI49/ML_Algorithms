@@ -5,17 +5,13 @@ Learning Agent for Tic Tac Toe based on Temporal Difference Technique
 import numpy as np
 import random
 import json
-
-def load_data():
-    with open('../X_states.json', 'r') as f:
-        distros_dict = json.load(f)
-    return distros_dict
+from collections import defaultdict
 
 
 class LearningAgent():
     """ This class represents the learning agent based on temporal difference
     """
-    def __init__(self, states, eta=0.2, learing_rate=0.2, load_previous = False):
+    def __init__(self, eta=0.2, learing_rate=0.2, load_previous = False):
         """ Initialises the agent
 
         Parameters
@@ -31,10 +27,12 @@ class LearningAgent():
         """
         self.eta = eta
         self.lr = learing_rate
+        self.states = defaultdict(int)
         if load_previous:
-            self.states = load_data()
-        else:
-            self.states = states
+            states = load_previous
+            for key, val in states.items():
+                self.states[key] = val
+
 
     def is_greedy_move(self):
         """ Samples 1 (for greedy) and 0 (for non greedy) from the binomial distribution
@@ -46,6 +44,9 @@ class LearningAgent():
         """ return a random move from list of moves
         """
         return random.choice(possible_moves)
+
+    def set_state_value(self, state, value):
+        self.states.update({state : value})
 
     def update_state_value(self, old_state, new_state):
         """ this updates the old_state value based on the new_state value

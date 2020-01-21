@@ -5,6 +5,13 @@ Script for generating all the possible states of n * n tic tac toe game
 import numpy as np
 import pandas as pd
 import copy
+import json
+
+
+def load_data(filename):
+    with open('%s' % (filename), 'r') as f:
+        distros_dict = json.load(f)
+    return distros_dict
 
 
 class TicTacToe:
@@ -24,11 +31,10 @@ class TicTacToe:
     def print_board(self):
         """Prints the board state in a matrix
         """
-        initial_value = ''
-        board = np.full((self.board_length, self.board_length), initial_value)
+        board = np.empty((self.board_length, self.board_length), dtype = '<U10')
         for i in range(0, self.board_length):
             for j in range(0, self.board_length):
-                board[i, j] = self.get_cell_number(i, j)
+                board[i, j] = str(self.get_cell_number(i, j))
         board = self.fill_board(board, self.board['X'], 'X')
         board = self.fill_board(board, self.board['O'], 'O')
         print(pd.DataFrame(board))
@@ -83,7 +89,8 @@ class TicTacToe:
         return '|'.join([xstate, ystate])
 
     def get_cell_number(self, i, j):
-        return j + (i * self.board_length) + 1
+        cell_number = j + (i * self.board_length) + 1
+        return cell_number
 
     def get_cell_indices(self, cell_number):
         i, j = divmod(cell_number - 1, self.board_length)
@@ -131,32 +138,6 @@ class TicTacToe:
             return True, (0.5, 'draw')
         else:
             return False, ()
-    
-    def generate_all_possible_states(self, possible_positions, current_state, next_symbol = 'X', last_position = False):
-        """ Generates all the possible board positions possible
-        """
-        score = 0
-        dict_state = self.get_state(current_state)
-            
-        if last_position: 
-            if self.check_won(self.moves_mapping[next_symbol], last_position, current_state):
-                score = self.moves_mapping[next_symbol]
-        
-        all_states =  {dict_state : score}
-        if score == 0:
-            for position in possible_positions:
-                new_state = copy.deepcopy(current_state)
-                new_state[next_symbol].append(position)
-                new_possible_positions = copy.deepcopy(possible_positions)
-                new_possible_positions.remove(position)
-                new_states = self.generate_all_possible_states(
-                                            new_possible_positions, 
-                                            new_state,
-                                            next_symbol= self.moves_mapping[next_symbol],
-                                            last_position= position
-                                            )
-                all_states.update(new_states)
-        return all_states
 
     def ask_for_move(self):
         """ Ask the next player for the move
@@ -178,32 +159,41 @@ if __name__ == "__main__":
     # print (len(a))
 
     from .LearningAgent import LearningAgent
-
+    
     def get_current_state_possible_states_n_moves(possible_moves, symbol, game):
+        """ This function generates the possible states based on the possible moves
+        """
         possible_states = {}
+        win_states = []
         current_state = game.get_state(game.board)
         for move in possible_moves:
             board = copy.deepcopy(game.board)
+            
             board[symbol].append(move)
-            possible_states.update({game.get_state(board): move})
-        return possible_states, current_state
+            state = game.get_state(board)
+            if game.check_won(symbol, move, board):
+                win_states.append(state)
+            possible_states.update({state: move})
+        return possible_states, current_state, win_states
 
-    board_length = 3
-    winning_condition = 3
+    board_length = 4
+    winning_condition = 4
     game = TicTacToe(board_length, winning_condition, first_player_symbol='O')
 
-    agent = LearningAgent({}, load_previous=True)
-
+    agent = LearningAgent(load_previous=load_data('../data/%s_%s/X_states.json' %
+                                                  (board_length, winning_condition)))
     completed = False
     while not completed:
-        #
 
         symbol = game.next_move
         possible_moves = game.possible_move_positions
         if symbol == 'X':
-            possible_states, current_state = get_current_state_possible_states_n_moves(
+            possible_states, current_state, win_states = get_current_state_possible_states_n_moves(
                 possible_moves, 'X', game)
-            _, next_move = agent.make_move(current_state, possible_states, always_greedy=True)
+            for state in win_states:
+                agent.set_state_value(state, 1)
+            _, next_move = agent.make_move(
+                current_state, possible_states, always_greedy=True)
             print("Agent runs : %s" % (next_move))
         else:
             symbol = game.ask_for_move()
