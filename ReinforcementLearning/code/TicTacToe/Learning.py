@@ -32,7 +32,7 @@ def get_current_state_possible_states_n_moves(possible_moves, symbol, game):
     current_state = game.get_state(game.board)
     for move in possible_moves:
         board = copy.deepcopy(game.board)
-        
+
         board[symbol].append(move)
         state = game.get_state(board)
         if game.check_won(symbol, move, board):
@@ -101,7 +101,7 @@ if __name__ == "__main__":
                             woncount += 1
                             X_wins += 1
                         else:
-                            
+
                             O_wins += 1
                             woncount = 0
                     else:
